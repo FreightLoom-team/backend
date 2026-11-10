@@ -8,5 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface OrganizationRepository extends Repository<Organization, UUID> {
+    Organization save(Organization organization);
+
     Optional<Organization> findByIdAndStatus(UUID id, OrganizationStatus status);
 }

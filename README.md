@@ -13,6 +13,15 @@ the repository query; callers must take it from `TenantContext`, never from a
 request body. `LoadStatusService` derives the tenant from that context and
 atomically records status changes and their history.
 
+Self-signup at `POST /api/v1/auth/signup` creates a carrier with an active
+`FLEET_MANAGER` membership or requests to join an existing carrier with an
+`INVITED` `DISPATCHER` membership. Existing-carrier signups return `202 Accepted`
+and cannot access tenant data until an administrator activates the membership;
+the tenant filter only admits active members. An active `OWNER`, `ADMIN`, or
+`FLEET_MANAGER` can approve a pending membership with
+`PATCH /api/v1/organization-members/{membershipId}/activate`; the tenant is
+derived from the authenticated session, not a request parameter.
+
 ## Configuration
 
 Set `DB_USERNAME`, `DB_PASSWORD`, `JWT_ISSUER_URI`, `JWT_JWK_SET_URI`, and

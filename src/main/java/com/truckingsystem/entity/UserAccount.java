@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -25,10 +26,19 @@ public class UserAccount extends AuditedEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @NotBlank
     @Size(max = 255)
-    @Column(name = "external_subject", nullable = false, unique = true, length = 255)
+    @Column(name = "external_subject", unique = true, length = 255)
     private String externalSubject;
+
+    @NotBlank
+    @Size(max = 100)
+    @Column(name = "first_name", nullable = false, length = 100)
+    private String firstName;
+
+    @NotBlank
+    @Size(max = 100)
+    @Column(name = "last_name", nullable = false, length = 100)
+    private String lastName;
 
     @NotBlank
     @Email
@@ -40,6 +50,11 @@ public class UserAccount extends AuditedEntity {
     @Size(max = 200)
     @Column(name = "display_name", nullable = false, length = 200)
     private String displayName;
+
+    @JsonIgnore
+    @Size(max = 100)
+    @Column(name = "password_hash", length = 100)
+    private String passwordHash;
 
     @Column(nullable = false)
     private boolean active = true;
