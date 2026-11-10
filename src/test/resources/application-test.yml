@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:freightloom;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+security:
+  jwt:
+    issuer-uri: https://issuer.test.example/
+    jwk-set-uri: https://issuer.test.example/jwks
+    audience: freightloom-test

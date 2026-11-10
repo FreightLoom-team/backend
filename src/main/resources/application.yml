@@ -1,3 +1,33 @@
 spring:
   application:
-    name: trucking-system
+    name: freightloom
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:freightloom}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+security:
+  jwt:
+    issuer-uri: ${JWT_ISSUER_URI}
+    jwk-set-uri: ${JWT_JWK_SET_URI}
+    audience: ${JWT_AUDIENCE}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
