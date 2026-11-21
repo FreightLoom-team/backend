@@ -1,3 +1,39 @@
 spring:
   application:
-    name: trucking-system
+    name: freightloom
+  datasource:
+    url: jdbc:postgresql://db.blwluoqgxtzwmqabbaxi.supabase.co:5432/postgres?sslmode=require
+    username: postgres
+    password: FreightLoom@02026
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
+    baseline-version: ${FLYWAY_BASELINE_VERSION:0}
+
+security:
+  jwt:
+    issuer-uri: ${JWT_ISSUER_URI:https://blwluoqgxtzwmqabbaxi.supabase.co/auth/v1}
+    jwk-set-uri: ${JWT_JWK_SET_URI:https://blwluoqgxtzwmqabbaxi.supabase.co/auth/v1/.well-known/jwks.json}
+    audience: ${JWT_AUDIENCE:authenticated}
+
+supabase:
+  url: https://blwluoqgxtzwmqabbaxi.supabase.co
+  anon-key: sb_publishable_uRIlu2cu_ztXroCunoHTiA_O-9tzKSe
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
