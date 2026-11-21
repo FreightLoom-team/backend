@@ -7,7 +7,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> {
-    Optional<UserAccount> findByExternalSubjectAndActiveTrue(String externalSubject);
+    Optional<UserAccount> findByExternalSubjectAndStatus(
+            String externalSubject, com.truckingsystem.entity.UserStatus status);
 
     boolean existsByEmailIgnoreCase(String email);
+
+    Optional<UserAccount> findByEmailIgnoreCase(String email);
+
+    Optional<UserAccount> findByExternalSubject(String externalSubject);
 }

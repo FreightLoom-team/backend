@@ -1,6 +1,6 @@
 package com.truckingsystem.controller;
 
-import com.truckingsystem.service.OrganizationMembershipService;
+import com.truckingsystem.service.CompanyMembershipService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -10,11 +10,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/organization-members")
-public class OrganizationMembershipController {
-    private final OrganizationMembershipService membershipService;
+@RequestMapping("/api/v1/company-memberships")
+public class CompanyMembershipController {
+    private final CompanyMembershipService membershipService;
 
-    public OrganizationMembershipController(OrganizationMembershipService membershipService) {
+    public CompanyMembershipController(CompanyMembershipService membershipService) {
         this.membershipService = membershipService;
     }
 

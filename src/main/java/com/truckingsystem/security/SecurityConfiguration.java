@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
@@ -41,7 +42,12 @@ public class SecurityConfiguration {
             @Value("${security.jwt.jwk-set-uri}") String jwkSetUri,
             @Value("${security.jwt.issuer-uri}") String issuerUri,
             @Value("${security.jwt.audience}") String audience) {
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
+                .jwsAlgorithms(algorithms -> {
+                    algorithms.add(SignatureAlgorithm.ES256);
+                    algorithms.add(SignatureAlgorithm.RS256);
+                })
+                .build();
         OAuth2TokenValidator<Jwt> issuerValidator = JwtValidators.createDefaultWithIssuer(issuerUri);
         OAuth2TokenValidator<Jwt> audienceValidator = jwt ->
                 jwt.getAudience().contains(audience)

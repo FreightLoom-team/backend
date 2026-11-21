@@ -12,6 +12,8 @@ public enum LoadStatus {
     AT_DELIVERY,
     DELIVERED,
     PENDING_REVIEW,
+    NEEDS_CORRECTION,
     COMPLETED,
-    CLOSED
+    CANCELLED,
+    DELIVERY_EXCEPTION
 }

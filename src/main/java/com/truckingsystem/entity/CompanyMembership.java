@@ -20,17 +20,18 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name = "organization_members", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_org_members_org_user", columnNames = {"organization_id", "user_id"})
+@Table(name = "company_memberships", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_company_memberships_company_user", columnNames = {"company_id", "user_id"})
 })
-public class OrganizationMember extends AuditedEntity {
+public class CompanyMembership {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "membership_id")
     private UUID id;
 
     @NotNull
-    @Column(name = "organization_id", nullable = false, updatable = false)
-    private UUID organizationId;
+    @Column(name = "company_id", nullable = false, updatable = false)
+    private UUID companyId;
 
     @NotNull
     @Column(name = "user_id", nullable = false, updatable = false)
@@ -38,11 +39,20 @@ public class OrganizationMember extends AuditedEntity {
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private OrganizationRole role;
+    @Column(name = "role", nullable = false, length = 24)
+    private CompanyRole role;
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "membership_status", nullable = false, length = 20)
     private MemberStatus status = MemberStatus.ACTIVE;
+
+    @Column(name = "invited_by_user_id")
+    private UUID invitedByUserId;
+
+    @Column(name = "joined_at")
+    private java.time.Instant joinedAt;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private java.time.Instant createdAt;
 }

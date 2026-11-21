@@ -8,9 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,26 +20,29 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name = "organizations", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_organizations_slug", columnNames = "slug")
-})
-public class Organization extends AuditedEntity {
+@Table(name = "companies")
+public class Company extends AuditedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "company_id")
     private UUID id;
 
     @NotBlank
     @Size(max = 200)
-    @Column(nullable = false, length = 200)
-    private String name;
+    @Column(name = "legal_name", nullable = false, length = 200)
+    private String legalName;
 
     @NotBlank
-    @Size(min = 3, max = 80)
-    @Pattern(regexp = "[a-z0-9]+(?:-[a-z0-9]+)*")
-    @Column(nullable = false, length = 80)
-    private String slug;
+    @Size(max = 160)
+    @Column(name = "display_name", nullable = false, length = 160)
+    private String displayName;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private OrganizationStatus status = OrganizationStatus.ACTIVE;
+    @Column(name = "company_status", nullable = false, length = 20)
+    private CompanyStatus status = CompanyStatus.ACTIVE;
+
+    @NotBlank
+    @Size(max = 40)
+    @Column(name = "company_code", nullable = false, unique = true, length = 40)
+    private String companyCode;
 }

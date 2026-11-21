@@ -14,3 +14,11 @@ security:
     issuer-uri: https://issuer.test.example/
     jwk-set-uri: https://issuer.test.example/jwks
     audience: freightloom-test
+
+app:
+  database:
+    row-level-security-enabled: false
+
+supabase:
+  url: https://test-project.supabase.co
+  anon-key: test-anon-key

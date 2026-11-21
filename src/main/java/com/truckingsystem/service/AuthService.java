@@ -3,116 +3,119 @@ package com.truckingsystem.service;
 import com.truckingsystem.common.EmailAlreadyRegisteredException;
 import com.truckingsystem.common.InvalidSignUpRequestException;
 import com.truckingsystem.common.ResourceNotFoundException;
+import com.truckingsystem.entity.Company;
+import com.truckingsystem.entity.CompanyMembership;
+import com.truckingsystem.entity.CompanyStatus;
 import com.truckingsystem.entity.MemberStatus;
-import com.truckingsystem.entity.Organization;
-import com.truckingsystem.entity.OrganizationMember;
-import com.truckingsystem.entity.OrganizationRole;
-import com.truckingsystem.entity.OrganizationStatus;
+import com.truckingsystem.entity.CompanyRole;
 import com.truckingsystem.entity.UserAccount;
+import com.truckingsystem.entity.UserStatus;
 import com.truckingsystem.pojo.SignUpRequest;
 import com.truckingsystem.pojo.SignUpResponse;
-import com.truckingsystem.repository.OrganizationMemberRepository;
-import com.truckingsystem.repository.OrganizationRepository;
+import com.truckingsystem.repository.CompanyMembershipRepository;
+import com.truckingsystem.repository.CompanyRepository;
 import com.truckingsystem.repository.UserAccountRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import com.truckingsystem.security.TenantDatabaseContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
-import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
 
 @Service
 public class AuthService {
     private final UserAccountRepository userAccountRepository;
-    private final OrganizationRepository organizationRepository;
-    private final OrganizationMemberRepository organizationMemberRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final CompanyRepository companyRepository;
+    private final CompanyMembershipRepository membershipRepository;
+    private final TenantDatabaseContext tenantDatabaseContext;
+    private final SupabaseAuthClient supabaseAuthClient;
 
     public AuthService(
             UserAccountRepository userAccountRepository,
-            OrganizationRepository organizationRepository,
-            OrganizationMemberRepository organizationMemberRepository,
-            PasswordEncoder passwordEncoder) {
+            CompanyRepository companyRepository,
+            CompanyMembershipRepository membershipRepository,
+            TenantDatabaseContext tenantDatabaseContext,
+            SupabaseAuthClient supabaseAuthClient) {
         this.userAccountRepository = userAccountRepository;
-        this.organizationRepository = organizationRepository;
-        this.organizationMemberRepository = organizationMemberRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.companyRepository = companyRepository;
+        this.membershipRepository = membershipRepository;
+        this.tenantDatabaseContext = tenantDatabaseContext;
+        this.supabaseAuthClient = supabaseAuthClient;
     }
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest request) {
-        boolean hasCompanyName = request.companyName() != null && !request.companyName().isBlank();
-        boolean hasOrganizationId = request.existingOrganizationId() != null;
-        if (hasCompanyName == hasOrganizationId) {
-            throw new InvalidSignUpRequestException(
-                    "Provide either a company name or an existing organization ID, but not both");
-        }
-        if (request.password().getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new InvalidSignUpRequestException("Password must not exceed 72 UTF-8 bytes");
-        }
+        SupabaseAuthClient.SupabaseUser identity = supabaseAuthClient.signUp(request);
+        String subject = identity.subject();
+        String email = identity.email().trim().toLowerCase(Locale.ROOT);
 
-        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
-        if (userAccountRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+        UserAccount user = userAccountRepository.findByExternalSubject(subject)
+                .or(() -> userAccountRepository.findByEmailIgnoreCase(email))
+                .orElseGet(UserAccount::new);
+        if (user.getStatus() != null && user.getStatus() != UserStatus.ACTIVE) {
+            throw new InvalidSignUpRequestException("User account is not active");
+        }
+        if (user.getId() == null
+                && userAccountRepository.existsByEmailIgnoreCase(email)) {
             throw new EmailAlreadyRegisteredException();
         }
 
-        UserAccount user = new UserAccount();
+        user.setExternalSubject(subject);
+        user.setEmail(email);
         user.setFirstName(request.firstName().trim());
         user.setLastName(request.lastName().trim());
         user.setDisplayName(user.getFirstName() + " " + user.getLastName());
-        user.setEmail(normalizedEmail);
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
-
+        user.setStatus(UserStatus.ACTIVE);
         user = userAccountRepository.saveAndFlush(user);
 
-        Organization organization;
-        OrganizationRole role;
+        boolean createCompany = request.companyName() != null && !request.companyName().isBlank();
+        Company company;
+        CompanyRole role;
         MemberStatus membershipStatus;
-        if (hasCompanyName) {
-            organization = new Organization();
-            organization.setName(request.companyName().trim());
-            organization.setSlug(createSlug(request.companyName()));
-            organization.setStatus(OrganizationStatus.ACTIVE);
-            organization.setCreatedBy(user.getId());
-            organization.setUpdatedBy(user.getId());
-            organization = organizationRepository.save(organization);
-            role = OrganizationRole.FLEET_MANAGER;
+
+        if (createCompany) {
+            company = new Company();
+            company.setLegalName(request.companyName().trim());
+            company.setDisplayName(request.companyName().trim());
+            company.setCompanyCode(createCompanyCode(request.companyName()));
+            company.setStatus(CompanyStatus.ACTIVE);
+            company = companyRepository.save(company);
+            role = CompanyRole.FLEET_MANAGER;
             membershipStatus = MemberStatus.ACTIVE;
         } else {
-            organization = organizationRepository
-                    .findByIdAndStatus(request.existingOrganizationId(), OrganizationStatus.ACTIVE)
-                    .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
-            role = OrganizationRole.DISPATCHER;
+            company = companyRepository.findByIdAndStatus(request.existingCompanyId(), CompanyStatus.ACTIVE)
+                    .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+            role = CompanyRole.DISPATCHER;
             membershipStatus = MemberStatus.INVITED;
         }
 
-        OrganizationMember member = new OrganizationMember();
-        member.setOrganizationId(organization.getId());
-        member.setUserId(user.getId());
-        member.setRole(role);
-        member.setStatus(membershipStatus);
-        member.setCreatedBy(user.getId());
-        member.setUpdatedBy(user.getId());
-        organizationMemberRepository.save(member);
+        tenantDatabaseContext.activate(company.getId());
+        CompanyMembership membership = new CompanyMembership();
+        membership.setCompanyId(company.getId());
+        membership.setUserId(user.getId());
+        membership.setRole(role);
+        membership.setStatus(membershipStatus);
+        membership.setJoinedAt(membershipStatus == MemberStatus.ACTIVE ? Instant.now() : null);
+        membership.setCreatedAt(Instant.now());
+        membershipRepository.save(membership);
 
         return new SignUpResponse(
-                user.getId(), organization.getId(), user.getFirstName(), user.getLastName(), user.getEmail(),
-                role, membershipStatus);
+                user.getId(), company.getId(), user.getFirstName(), user.getLastName(), user.getEmail(),
+                role, membershipStatus, identity.accessToken());
     }
 
-    private String createSlug(String companyName) {
-        String normalized = Normalizer.normalize(companyName, Normalizer.Form.NFKD)
+    private String createCompanyCode(String name) {
+        String normalized = Normalizer.normalize(name, Normalizer.Form.NFKD)
                 .replaceAll("\\p{M}", "")
-                .toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", "-")
+                .toUpperCase(Locale.ROOT)
+                .replaceAll("[^A-Z0-9]+", "-")
                 .replaceAll("^-|-$", "");
         if (normalized.isBlank()) {
-            normalized = "freight-carrier";
+            normalized = "CARRIER";
         }
-        String suffix = UUID.randomUUID().toString().substring(0, 8);
-        String prefix = normalized.substring(0, Math.min(normalized.length(), 70)).replaceAll("-+$", "");
-        return prefix + "-" + suffix;
+        String prefix = normalized.substring(0, Math.min(31, normalized.length())).replaceAll("-+$", "");
+        return prefix + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
     }
 }

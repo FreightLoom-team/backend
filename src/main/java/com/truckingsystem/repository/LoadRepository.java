@@ -14,12 +14,12 @@ import java.util.UUID;
 public interface LoadRepository extends Repository<Load, UUID> {
     Load save(Load load);
 
-    Optional<Load> findByIdAndOrganizationId(UUID id, UUID organizationId);
+    Optional<Load> findByIdAndCompanyId(UUID id, UUID companyId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select load from Load load where load.id = :loadId and load.organizationId = :organizationId")
-    Optional<Load> findByIdAndOrganizationIdForUpdate(
-            @Param("loadId") UUID loadId, @Param("organizationId") UUID organizationId);
+    @Query("select load from Load load where load.id = :loadId and load.companyId = :companyId")
+    Optional<Load> findByIdAndCompanyIdForUpdate(
+            @Param("loadId") UUID loadId, @Param("companyId") UUID companyId);
 
-    List<Load> findAllByOrganizationId(UUID organizationId);
+    List<Load> findAllByCompanyId(UUID companyId);
 }

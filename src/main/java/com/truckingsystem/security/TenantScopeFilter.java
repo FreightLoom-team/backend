@@ -1,12 +1,7 @@
 package com.truckingsystem.security;
 
 import com.truckingsystem.common.TenantContext;
-import com.truckingsystem.entity.MemberStatus;
-import com.truckingsystem.entity.OrganizationStatus;
-import com.truckingsystem.entity.UserAccount;
-import com.truckingsystem.repository.OrganizationMemberRepository;
-import com.truckingsystem.repository.OrganizationRepository;
-import com.truckingsystem.repository.UserAccountRepository;
+import com.truckingsystem.service.TenantAccessService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,25 +17,19 @@ import java.util.UUID;
 
 @Component
 public class TenantScopeFilter extends OncePerRequestFilter {
-    private static final String ORGANIZATION_CLAIM = "organization_id";
+    private static final String COMPANY_CLAIM = "company_id";
 
-    private final UserAccountRepository userAccountRepository;
-    private final OrganizationMemberRepository memberRepository;
-    private final OrganizationRepository organizationRepository;
+    private final TenantAccessService tenantAccessService;
 
-    public TenantScopeFilter(
-            UserAccountRepository userAccountRepository,
-            OrganizationMemberRepository memberRepository,
-            OrganizationRepository organizationRepository) {
-        this.userAccountRepository = userAccountRepository;
-        this.memberRepository = memberRepository;
-        this.organizationRepository = organizationRepository;
+    public TenantScopeFilter(TenantAccessService tenantAccessService) {
+        this.tenantAccessService = tenantAccessService;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.equals("/actuator/health") || path.startsWith("/actuator/health/");
+        return path.equals("/actuator/health") || path.startsWith("/actuator/health/")
+                || path.equals("/api/v1/auth/signup");
     }
 
     @Override
@@ -54,23 +43,19 @@ public class TenantScopeFilter extends OncePerRequestFilter {
             return;
         }
 
-        UUID organizationId = parseOrganizationId(jwtAuthentication, response);
-        if (organizationId == null) {
+        UUID companyId = parseCompanyId(jwtAuthentication, response);
+        if (companyId == null) {
             return;
         }
 
-        UserAccount user = userAccountRepository
-                .findByExternalSubjectAndActiveTrue(jwtAuthentication.getToken().getSubject())
-                .orElse(null);
-        if (user == null
-                || !memberRepository.existsByOrganizationIdAndUserIdAndStatus(
-                        organizationId, user.getId(), MemberStatus.ACTIVE)
-                || organizationRepository.findByIdAndStatus(organizationId, OrganizationStatus.ACTIVE).isEmpty()) {
+        UUID userId = tenantAccessService.findActiveUserIdForCompany(
+                jwtAuthentication.getToken().getSubject(), companyId).orElse(null);
+        if (userId == null) {
             writeForbidden(response);
             return;
         }
 
-        TenantContext.set(organizationId, user.getId());
+        TenantContext.set(companyId, userId);
         try {
             filterChain.doFilter(request, response);
         } finally {
@@ -78,15 +63,15 @@ public class TenantScopeFilter extends OncePerRequestFilter {
         }
     }
 
-    private UUID parseOrganizationId(JwtAuthenticationToken authentication, HttpServletResponse response)
+    private UUID parseCompanyId(JwtAuthenticationToken authentication, HttpServletResponse response)
             throws IOException {
-        Object claim = authentication.getToken().getClaims().get(ORGANIZATION_CLAIM);
-        if (!(claim instanceof String organizationIdClaim)) {
+        Object claim = authentication.getToken().getClaims().get(COMPANY_CLAIM);
+        if (!(claim instanceof String companyIdClaim)) {
             writeForbidden(response);
             return null;
         }
         try {
-            return UUID.fromString(organizationIdClaim);
+            return UUID.fromString(companyIdClaim);
         } catch (IllegalArgumentException exception) {
             writeForbidden(response);
             return null;

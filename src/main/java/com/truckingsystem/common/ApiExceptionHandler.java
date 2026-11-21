@@ -29,6 +29,11 @@ public class ApiExceptionHandler {
         return problem(HttpStatus.CONFLICT, exception.getMessage());
     }
 
+    @ExceptionHandler(ExternalIdentityProviderException.class)
+    ResponseEntity<ProblemDetail> handleIdentityProviderFailure(ExternalIdentityProviderException exception) {
+        return problem(HttpStatus.BAD_GATEWAY, exception.getMessage());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ProblemDetail> handleIntegrityViolation(DataIntegrityViolationException exception) {
         return problem(HttpStatus.CONFLICT, "A record with the supplied unique value already exists");

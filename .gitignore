@@ -10,6 +10,11 @@ target/
 application-local.yml
 application-local.properties
 
+# Local H2 database files
+/freightloom.mv.db
+/freightloom.lock.db
+/freightloom.trace.db
+
 # IntelliJ IDEA
 .idea/
 *.iws

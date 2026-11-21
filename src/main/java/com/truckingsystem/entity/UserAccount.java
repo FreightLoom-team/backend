@@ -2,14 +2,14 @@ package com.truckingsystem.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -24,38 +24,32 @@ import java.util.UUID;
 public class UserAccount extends AuditedEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "user_id")
     private UUID id;
 
     @Size(max = 255)
-    @Column(name = "external_subject", unique = true, length = 255)
+    @Column(name = "auth_subject", unique = true, length = 255)
     private String externalSubject;
 
     @NotBlank
-    @Size(max = 100)
-    @Column(name = "first_name", nullable = false, length = 100)
+    @Size(max = 80)
+    @Column(name = "first_name", nullable = false, length = 80)
     private String firstName;
 
     @NotBlank
-    @Size(max = 100)
-    @Column(name = "last_name", nullable = false, length = 100)
+    @Size(max = 80)
+    @Column(name = "last_name", nullable = false, length = 80)
     private String lastName;
 
-    @NotBlank
-    @Email
-    @Size(max = 320)
-    @Column(nullable = false, length = 320)
+    @Size(max = 254)
+    @Column(length = 254)
     private String email;
 
-    @NotBlank
-    @Size(max = 200)
-    @Column(name = "display_name", nullable = false, length = 200)
+    @Size(max = 160)
+    @Column(name = "display_name", length = 160)
     private String displayName;
 
-    @JsonIgnore
-    @Size(max = 100)
-    @Column(name = "password_hash", length = 100)
-    private String passwordHash;
-
-    @Column(nullable = false)
-    private boolean active = true;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_status", nullable = false, length = 20)
+    private UserStatus status = UserStatus.ACTIVE;
 }

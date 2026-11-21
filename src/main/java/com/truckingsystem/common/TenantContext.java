@@ -9,8 +9,8 @@ public final class TenantContext {
     private TenantContext() {
     }
 
-    public static void set(UUID organizationId, UUID userId) {
-        CURRENT.set(new Scope(organizationId, userId));
+    public static void set(UUID companyId, UUID userId) {
+        CURRENT.set(new Scope(companyId, userId));
     }
 
     public static Optional<Scope> current() {
@@ -21,6 +21,6 @@ public final class TenantContext {
         CURRENT.remove();
     }
 
-    public record Scope(UUID organizationId, UUID userId) {
+    public record Scope(UUID companyId, UUID userId) {
     }
 }
